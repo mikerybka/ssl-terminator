@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -11,6 +12,12 @@ import (
 )
 
 func main() {
+	// Fetch certDir from env var
+	certDir := os.Getenv("CERT_DIR")
+	if certDir == "" {
+		log.Fatal("CERT_DIR environment variable is not set")
+	}
+
 	// Fetch BACKEND_URL from environment variable
 	backendURL := os.Getenv("BACKEND_URL")
 	if backendURL == "" {
@@ -23,27 +30,19 @@ func main() {
 		log.Fatalf("Invalid BACKEND_URL: %v", err)
 	}
 
-	// Create a reverse proxy to forward requests to the backend
-	reverseProxy := httputil.NewSingleHostReverseProxy(parsedURL)
-
-	// Define the handler that will use the reverse proxy
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Modify the request if needed, e.g., change headers
-		r.Host = parsedURL.Host
-		reverseProxy.ServeHTTP(w, r)
-	})
-
 	// Create a certificate manager
 	certManager := autocert.Manager{
-		Cache:      autocert.DirCache("certs"),
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(), // Set allowed hostnames here
+		Cache:  autocert.DirCache(certDir),
+		Prompt: autocert.AcceptTOS,
+		HostPolicy: func(ctx context.Context, host string) error {
+			return nil
+		},
 	}
 
 	// Create an HTTPS server using autocert
 	httpsServer := &http.Server{
 		Addr:      ":443",
-		Handler:   handler,
+		Handler:   httputil.NewSingleHostReverseProxy(parsedURL),
 		TLSConfig: certManager.TLSConfig(),
 	}
 
