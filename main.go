@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -35,6 +36,7 @@ func main() {
 		Cache:  autocert.DirCache(certDir),
 		Prompt: autocert.AcceptTOS,
 		HostPolicy: func(ctx context.Context, host string) error {
+			fmt.Println(host)
 			return nil
 		},
 	}
