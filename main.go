@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 
+	"github.com/mikerybka/frontend"
+	"github.com/mikerybka/twilio"
+	"github.com/mikerybka/util"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -41,10 +43,21 @@ func main() {
 		},
 	}
 
+	// Create the http handler
+	h := &frontend.Server{
+		TwilioClient: &twilio.Client{
+			AccountSID:  util.RequireEnvVar("TWILIO_ACCOUNT_SID"),
+			AuthToken:   util.RequireEnvVar("TWILIO_AUTH_TOKEN"),
+			PhoneNumber: util.RequireEnvVar("TWILIO_PHONE_NUMBER"),
+		},
+		AdminPhone: util.RequireEnvVar("ADMIN_PHONE"),
+		BackendURL: parsedURL,
+	}
+
 	// Create an HTTPS server using autocert
 	httpsServer := &http.Server{
 		Addr:      ":443",
-		Handler:   httputil.NewSingleHostReverseProxy(parsedURL),
+		Handler:   h,
 		TLSConfig: certManager.TLSConfig(),
 	}
 
